@@ -74,9 +74,10 @@ PRO DJ LINK と暗号化 `master.db` を扱う。このアプリ（GPL）はク�
 |---|---|---|
 | `hello` | `protocol` | `protocol`, `sidecar`, `capabilities` |
 | `library.open` | `db`（パス。`null` なら既定の場所を探す）, `share`（ANLZ のルート。省略時は `db` の隣の `share`） | `tracks`, `playlists` |
-| `library.tracks` | `offset`（既定 0）, `limit`（既定 500、最大 5000） | `total`, `tracks[]` |
+| `library.playlists` | なし | `playlists[]`（下記。親→子の順に平坦化） |
+| `library.tracks` | `offset`（既定 0）, `limit`（既定 500、最大 5000）, `playlist`（任意。ID を渡すとそのプレイリストの曲を順番どおりに） | `total`, `tracks[]` |
 | `library.track` | `id` | 下記の 1 件（フィールドは `tracks[]` と同じ） |
-| `library.analysis` | `id` | `anlz: {dat, ext}`（書き出したファイルの絶対パス） |
+| `library.analysis` | `id` | `anlz: {dat, ext}`（実ファイルの絶対パス。無ければ `null`） |
 
 ### track
 
@@ -93,7 +94,14 @@ PRO DJ LINK と暗号化 `master.db` を扱う。このアプリ（GPL）はク�
   "path": "/Users/…/track.aiff",
   "bitrate": 1411,
   "sample_rate": 44100,
-  "date_added": "2026-01-02T03:04:05Z"
+  "date_added": "2026-01-02T03:04:05Z",
+  "analysis": {"dat": "/…/ANLZ0000.DAT", "ext": "/…/ANLZ0000.EXT"},
+  "cues": [
+    {"hot_cue": 0, "time_ms": 1200, "loop_end_ms": null, "color_id": 0,
+     "hot_cue_color": null, "comment": ""},
+    {"hot_cue": 1, "time_ms": 48000, "loop_end_ms": null, "color_id": 2,
+     "hot_cue_color": {"index": 3, "rgb": [255, 0, 0]}, "comment": "intro"}
+  ]
 }
 ```
 
@@ -101,6 +109,25 @@ PRO DJ LINK と暗号化 `master.db` を扱う。このアプリ（GPL）はク�
 - `path` は元の音声ファイル。存在しない場合も返す（クライアントが「見つからない」と表示できるように）。
 - `library.analysis` の `dat` / `ext` は、rekordbox の share（`analysis-data-root-path`）にある
   実ファイルの絶対パス。無い場合は `null`。クライアントはコピーせず、Mixxx の既存の ANLZ 読み取りに渡す。
+- `tracks[]` / `library.track` にも同じ `analysis` を入れる。1 曲ごとに `library.analysis` を呼ばずに済む。
+- `cues` は `master.db` の `djmdCue`（無ければ ANLZ）。`hot_cue` は 0 = メモリー、1〜 = ホットキュー A〜。
+  `loop_end_ms` が非 `null` ならループ。`hot_cue_color.rgb` はホットキューの色（無ければ `null`）。
+
+### playlist
+
+```json
+{
+  "id": 42,
+  "name": "Warm up",
+  "parent_id": 7,
+  "is_folder": false,
+  "sort_order": 3,
+  "tracks": [1234, 5678]
+}
+```
+
+- フォルダは `is_folder: true`、`tracks` は空。親 → 子の順で返すので、この順に木を作れる。
+- `tracks` は rekordbox の曲 ID（`track.id`）を並び順で持つ。
 
 ## エラー
 
@@ -113,6 +140,7 @@ PRO DJ LINK と暗号化 `master.db` を扱う。このアプリ（GPL）はク�
 | `library.not_open` | `library.open` より先に他の library method を呼んだ |
 | `library.locked` | コピーに失敗した（読み取り中のロックなど） |
 | `library.bad_db` | 復号・スキーマの読み取りに失敗した |
+| `playlist.not_found` | `library.tracks` に渡した playlist ID が無い |
 | `track.not_found` | `id` が無い |
 | `internal` | 上記以外。`message` に詳細 |
 

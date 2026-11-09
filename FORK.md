@@ -54,7 +54,11 @@ flowchart LR
 
 - **`PRO DJ LINK` ライブラリ機能**: サイドバーの「PRO DJ LINK」を選ぶと sidecar に接続し、`master.db` の
   コレクションを Mixxx の曲表に出す。実ライブラリ（409 曲）で、タイトル・アーティスト・BPM・長さ・パスが
-  入ることを確認。ANLZ（beatgrid / cue）はまだ読まない。
+  入ることを確認。
+- **プレイリスト**: `library.playlists` の木をサイドバーに出す。選ぶと曲順どおりの一覧になり、ANLZ の
+  beat grid と、`djmdCue` のメモリーキュー・ホットキュー・ループが入る（実データ 409 曲・12 プレイリスト・
+  513 キューで確認）。rekordbox の ID は 32 ビットに収まらないものがあるので、Mixxx 側では振り直した
+  ローカル ID を使う。
 - **設定**: `[Library] ShowProLinkLibrary`（既定 `true`）。ソケットは環境変数 `PDL_SIDECAR_SOCKET`、
   既定は `$TMPDIR/pdl-sidecar.sock`。sidecar が居なければ画面にエラーを出すだけで、Mixxx は動き続ける。
 - **テスト**: `./build/mixxx-test --gtest_filter='ProLinkSidecarClientTest.*'`（偽の sidecar で

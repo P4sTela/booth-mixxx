@@ -71,8 +71,36 @@ bool ProLinkSidecarClient::openLibrary(QString* pError) {
     return call(QStringLiteral("library.open"), QJsonObject(), &result, pError);
 }
 
+bool ProLinkSidecarClient::fetchPlaylists(
+        QVector<ProLinkPlaylist>* pPlaylists,
+        QString* pError) {
+    pPlaylists->clear();
+    QJsonObject result;
+    if (!call(QStringLiteral("library.playlists"), QJsonObject(), &result, pError)) {
+        return false;
+    }
+    const QJsonArray playlists =
+            result.value(QStringLiteral("playlists")).toArray();
+    for (const auto& value : playlists) {
+        const QJsonObject object = value.toObject();
+        ProLinkPlaylist playlist;
+        playlist.id = object.value(QStringLiteral("id")).toInteger();
+        playlist.name = object.value(QStringLiteral("name")).toString();
+        playlist.parentId = object.value(QStringLiteral("parent_id")).toInteger();
+        playlist.isFolder = object.value(QStringLiteral("is_folder")).toBool();
+        playlist.sortOrder = object.value(QStringLiteral("sort_order")).toInt();
+        const QJsonArray trackIds = object.value(QStringLiteral("tracks")).toArray();
+        for (const auto& trackId : trackIds) {
+            playlist.trackIds.append(trackId.toInteger());
+        }
+        pPlaylists->append(playlist);
+    }
+    return true;
+}
+
 bool ProLinkSidecarClient::fetchTracks(
         int limit,
+        int playlistId,
         QVector<ProLinkTrack>* pTracks,
         int* pTotal,
         QString* pError) {
@@ -83,6 +111,9 @@ bool ProLinkSidecarClient::fetchTracks(
         QJsonObject params;
         params.insert(QStringLiteral("offset"), offset);
         params.insert(QStringLiteral("limit"), limit);
+        if (playlistId >= 0) {
+            params.insert(QStringLiteral("playlist"), playlistId);
+        }
         QJsonObject result;
         if (!call(QStringLiteral("library.tracks"), params, &result, pError)) {
             return false;
@@ -92,7 +123,7 @@ bool ProLinkSidecarClient::fetchTracks(
         for (const auto& value : tracks) {
             const QJsonObject track = value.toObject();
             ProLinkTrack parsed;
-            parsed.id = track.value(QStringLiteral("id")).toInt();
+            parsed.id = track.value(QStringLiteral("id")).toInteger();
             parsed.title = track.value(QStringLiteral("title")).toString();
             parsed.artist = track.value(QStringLiteral("artist")).toString();
             parsed.album = track.value(QStringLiteral("album")).toString();
@@ -100,6 +131,29 @@ bool ProLinkSidecarClient::fetchTracks(
             parsed.key = track.value(QStringLiteral("key")).toString();
             parsed.location = track.value(QStringLiteral("path")).toString();
             parsed.dateAdded = track.value(QStringLiteral("date_added")).toString();
+            const QJsonObject analysis =
+                    track.value(QStringLiteral("analysis")).toObject();
+            parsed.anlzDat = analysis.value(QStringLiteral("dat")).toString();
+            parsed.anlzExt = analysis.value(QStringLiteral("ext")).toString();
+            const QJsonArray cues = track.value(QStringLiteral("cues")).toArray();
+            for (const auto& cueValue : cues) {
+                const QJsonObject object = cueValue.toObject();
+                ProLinkCue cue;
+                cue.hotCue = object.value(QStringLiteral("hot_cue")).toInt();
+                cue.timeMs = object.value(QStringLiteral("time_ms")).toInteger();
+                cue.loopEndMs =
+                        object.value(QStringLiteral("loop_end_ms")).toInteger(-1);
+                cue.colorId = object.value(QStringLiteral("color_id")).toInt();
+                cue.comment = object.value(QStringLiteral("comment")).toString();
+                const QJsonObject hotCueColor =
+                        object.value(QStringLiteral("hot_cue_color")).toObject();
+                const QJsonArray rgb = hotCueColor.value(QStringLiteral("rgb")).toArray();
+                if (rgb.size() == 3) {
+                    cue.hotCueRgb = (rgb.at(0).toInt() << 16) |
+                            (rgb.at(1).toInt() << 8) | rgb.at(2).toInt();
+                }
+                parsed.cues.append(cue);
+            }
             parsed.bpm = track.value(QStringLiteral("bpm")).toDouble() / 100.0;
             parsed.durationMs = static_cast<qint64>(
                     track.value(QStringLiteral("duration_ms")).toDouble());

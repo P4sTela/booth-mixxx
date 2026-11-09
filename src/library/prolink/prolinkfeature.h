@@ -8,6 +8,7 @@
 #include <QVector>
 
 #include "library/baseexternallibraryfeature.h"
+#include "library/baseexternalplaylistmodel.h"
 #include "library/baseexternaltrackmodel.h"
 #include "library/prolink/sidecarclient.h"
 #include "library/treeitemmodel.h"
@@ -17,6 +18,30 @@ class BaseTrackCache;
 class KeyboardEventFilter;
 class WLibrary;
 class WLibraryTextBrowser;
+
+/// Track model that applies the ANLZ beat grid and cues when a track is first loaded.
+class ProLinkTrackModel : public BaseExternalTrackModel {
+  public:
+    ProLinkTrackModel(QObject* parent,
+            TrackCollectionManager* pTrackCollectionManager,
+            const char* settingsNamespace,
+            const QString& trackTable,
+            QSharedPointer<BaseTrackCache> trackSource);
+
+    TrackPointer getTrack(const QModelIndex& index) const override;
+    bool isColumnInternal(int column) override;
+};
+
+/// Playlist view that applies the ANLZ beat grid and cues when a track is first loaded.
+class ProLinkPlaylistModel : public BaseExternalPlaylistModel {
+  public:
+    ProLinkPlaylistModel(QObject* parent,
+            TrackCollectionManager* pTrackCollectionManager,
+            QSharedPointer<BaseTrackCache> trackSource);
+
+    TrackPointer getTrack(const QModelIndex& index) const override;
+    bool isColumnInternal(int column) override;
+};
 
 /// Library feature that shows the rekordbox collection through the PRO DJ LINK sidecar.
 ///
@@ -34,6 +59,7 @@ class ProLinkFeature : public BaseExternalLibraryFeature {
 
   public slots:
     void activate() override;
+    void activateChild(const QModelIndex& index) override;
 
   private slots:
     void loadFinished();
@@ -42,6 +68,7 @@ class ProLinkFeature : public BaseExternalLibraryFeature {
   private:
     struct LoadResult {
         QVector<ProLinkTrack> tracks;
+        QVector<ProLinkPlaylist> playlists;
         int total = 0;
         QString error;
         bool ok = false;
@@ -50,9 +77,12 @@ class ProLinkFeature : public BaseExternalLibraryFeature {
     void startLoading();
     void showMessage(const QString& html);
     void writeTracks(const QVector<ProLinkTrack>& tracks);
+    void writePlaylists(const QVector<ProLinkPlaylist>& playlists);
+    void updateSidebar(const QVector<ProLinkPlaylist>& playlists);
 
     parented_ptr<TreeItemModel> m_pSidebarModel;
-    parented_ptr<BaseExternalTrackModel> m_pTrackModel;
+    parented_ptr<ProLinkTrackModel> m_pTrackModel;
+    parented_ptr<ProLinkPlaylistModel> m_pPlaylistModel;
     QSharedPointer<BaseTrackCache> m_trackSource;
     QSharedPointer<LoadResult> m_pLoadResult;
     QFuture<void> m_loadFuture;

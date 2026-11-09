@@ -1469,6 +1469,7 @@ add_library(
   src/library/recording/dlgrecording.cpp
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
+  src/library/rekordbox/rekordboxanlz.cpp
   src/library/rekordbox/rekordboxfeature.cpp
   src/library/prolink/prolinkfeature.cpp
   src/library/prolink/sidecarclient.cpp

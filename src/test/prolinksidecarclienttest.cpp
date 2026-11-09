@@ -71,6 +71,17 @@ void runFakeSidecar(const QString& path, bool failTracks, std::promise<bool>* pR
             result.insert(QStringLiteral("tracks"), 3);
             result.insert(QStringLiteral("playlists"), 1);
             response.insert(QStringLiteral("result"), result);
+        } else if (method == QLatin1String("library.playlists")) {
+            QJsonObject playlist;
+            playlist.insert(QStringLiteral("id"), 7);
+            playlist.insert(QStringLiteral("name"), QStringLiteral("Warm up"));
+            playlist.insert(QStringLiteral("parent_id"), 0);
+            playlist.insert(QStringLiteral("is_folder"), false);
+            playlist.insert(QStringLiteral("sort_order"), 1);
+            playlist.insert(QStringLiteral("tracks"), QJsonArray{1, 2, 3});
+            QJsonObject result;
+            result.insert(QStringLiteral("playlists"), QJsonArray{playlist});
+            response.insert(QStringLiteral("result"), result);
         } else if (method == QLatin1String("library.tracks")) {
             if (failTracks) {
                 QJsonObject error;
@@ -150,7 +161,7 @@ TEST(ProLinkSidecarClientTest, ReadsEveryPageAndScalesBpm) {
 
     QVector<ProLinkTrack> tracks;
     int total = 0;
-    ASSERT_TRUE(client.fetchTracks(2, &tracks, &total, &error))
+    ASSERT_TRUE(client.fetchTracks(2, -1, &tracks, &total, &error))
             << error.toStdString();
     ASSERT_EQ(3, total);
     ASSERT_EQ(3, tracks.size());
@@ -159,6 +170,13 @@ TEST(ProLinkSidecarClientTest, ReadsEveryPageAndScalesBpm) {
     EXPECT_EQ(192000, tracks.at(0).durationMs);
     EXPECT_EQ(QStringLiteral("/music/one.flac"), tracks.at(0).location);
     EXPECT_EQ(QStringLiteral("Three"), tracks.at(2).title);
+
+    QVector<ProLinkPlaylist> playlists;
+    ASSERT_TRUE(client.fetchPlaylists(&playlists, &error)) << error.toStdString();
+    ASSERT_EQ(1, playlists.size());
+    EXPECT_EQ(QStringLiteral("Warm up"), playlists.at(0).name);
+    EXPECT_FALSE(playlists.at(0).isFolder);
+    EXPECT_EQ(QVector<qint64>({1, 2, 3}), playlists.at(0).trackIds);
 }
 
 TEST(ProLinkSidecarClientTest, ReportsSidecarErrors) {
@@ -175,7 +193,7 @@ TEST(ProLinkSidecarClientTest, ReportsSidecarErrors) {
 
     QVector<ProLinkTrack> tracks;
     int total = 0;
-    EXPECT_FALSE(client.fetchTracks(2, &tracks, &total, &error));
+    EXPECT_FALSE(client.fetchTracks(2, -1, &tracks, &total, &error));
     EXPECT_TRUE(error.startsWith(QStringLiteral("library.locked")))
             << error.toStdString();
 }
