@@ -4,6 +4,7 @@ Mixxx の個人フォーク。PRO DJ LINK（実機デッキ・rekordbox ライ�
 上流のコードと履歴をそのまま保ち、差分は小さく保つ。
 
 - 上流: <https://github.com/mixxxdj/mixxx>（`upstream`、HEAD `64c1cbe`、2026-11-06 時点の `main`）
+- 公開先: <https://github.com/P4sTela/booth-mixxx>（`origin`、public）
 - このリポジトリのライセンス: **GPL-2.0-or-later**（上流と同じ。追加したコードも同じ）
 - 元の Mixxx: Digital DJ'ing software, Copyright (C) 2001-2026 Mixxx Development Team
 
