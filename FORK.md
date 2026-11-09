@@ -34,7 +34,7 @@ flowchart LR
 
 - sidecar が担う: LINK への参加、dbserver、beat/status の受信、暗号化 `master.db` のコピー読み。
 - このアプリが担う: 音・FX・ライブラリ UI・コントローラー・画面。PRO DJ LINK のクライアントだけを足す。
-- IPC の契約（メッセージ形式・ポート・起動方法）は sidecar を実装するときに決め、ここへ追記する。
+- IPC の契約: [`docs/prolink-sidecar.md`](docs/prolink-sidecar.md)（v0 草案。`pdl sidecar` の実装と同時に確定する）。
 - 上流が既に持つ rekordbox 対応は **USB export の `export.pdb` + ANLZ のみ**（`src/library/rekordbox`）。
   暗号化 `master.db` は読めないので、そこは sidecar の仕事。
 
