@@ -59,6 +59,10 @@ flowchart LR
   beat grid と、`djmdCue` のメモリーキュー・ホットキュー・ループが入る（実データ 409 曲・12 プレイリスト・
   513 キューで確認）。rekordbox の ID は 32 ビットに収まらないものがあるので、Mixxx 側では振り直した
   ローカル ID を使う。
+- **メモリーキュー**: rekordbox の `hot_cue: 0` を新しい `CueType::Memory` として保存する（ホットキューへ
+  変換しない）。デッキごとに `memory_cue_1..10_position` / `memory_cue_1..10_enabled` を持ち、波形に
+  マーカーを出す。操作は `memory_cue_set` / `memory_cue_prev` / `memory_cue_next`。キーボードは
+  デッキ 1 が `Shift+m` / `Ctrl+←` / `Ctrl+→`、デッキ 2 が `Shift+n` / `Ctrl+↑` / `Ctrl+↓`。
 - **設定**: `[Library] ShowProLinkLibrary`（既定 `true`）。ソケットは環境変数 `PDL_SIDECAR_SOCKET`、
   既定は `$TMPDIR/pdl-sidecar.sock`。sidecar が居なければ画面にエラーを出すだけで、Mixxx は動き続ける。
 - **テスト**: `./build/mixxx-test --gtest_filter='ProLinkSidecarClientTest.*'`（偽の sidecar で

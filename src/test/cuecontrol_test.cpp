@@ -588,3 +588,76 @@ TEST_F(CueControlTest, OutroCue_SetStartEnd_ClearStartEnd) {
 
     EXPECT_EQ(nullptr, pTrack->findCueByType(mixxx::CueType::Outro));
 }
+
+TEST_F(CueControlTest, LoadTrackWithMemoryCues) {
+    const auto pTrack = createTestTrack();
+    pTrack->createAndAddCue(mixxx::CueType::Memory,
+            Cue::kNoHotCue,
+            mixxx::audio::FramePos(44100),
+            mixxx::audio::kInvalidFramePos);
+    pTrack->createAndAddCue(mixxx::CueType::Memory,
+            Cue::kNoHotCue,
+            mixxx::audio::FramePos(88200),
+            mixxx::audio::kInvalidFramePos);
+    loadTrack(pTrack);
+
+    ControlProxy enabled1(m_sGroup1, "memory_cue_1_enabled");
+    ControlProxy position1(m_sGroup1, "memory_cue_1_position");
+    ControlProxy enabled2(m_sGroup1, "memory_cue_2_enabled");
+    ControlProxy position2(m_sGroup1, "memory_cue_2_position");
+    ControlProxy enabled3(m_sGroup1, "memory_cue_3_enabled");
+
+    EXPECT_TRUE(enabled1.toBool());
+    EXPECT_DOUBLE_EQ(mixxx::audio::FramePos(44100).toEngineSamplePos(),
+            position1.get());
+    EXPECT_TRUE(enabled2.toBool());
+    EXPECT_DOUBLE_EQ(mixxx::audio::FramePos(88200).toEngineSamplePos(),
+            position2.get());
+    EXPECT_FALSE(enabled3.toBool());
+}
+
+TEST_F(CueControlTest, MemoryCueSetAndJump) {
+    const auto pTrack = createTestTrack();
+    pTrack->createAndAddCue(mixxx::CueType::Memory,
+            Cue::kNoHotCue,
+            mixxx::audio::FramePos(44100),
+            mixxx::audio::kInvalidFramePos);
+    pTrack->createAndAddCue(mixxx::CueType::Memory,
+            Cue::kNoHotCue,
+            mixxx::audio::FramePos(88200),
+            mixxx::audio::kInvalidFramePos);
+    loadTrack(pTrack);
+
+    ControlProxy next(m_sGroup1, "memory_cue_next");
+    ControlProxy prev(m_sGroup1, "memory_cue_prev");
+
+    setCurrentFramePos(mixxx::audio::kStartFramePos);
+    next.set(1);
+    next.set(0);
+    ProcessBuffer();
+    EXPECT_FRAMEPOS_EQ(mixxx::audio::FramePos(44100), getCurrentFramePos());
+    next.set(1);
+    next.set(0);
+    ProcessBuffer();
+    EXPECT_FRAMEPOS_EQ(mixxx::audio::FramePos(88200), getCurrentFramePos());
+    next.set(1);
+    next.set(0);
+    ProcessBuffer();
+    EXPECT_FRAMEPOS_EQ(mixxx::audio::FramePos(44100), getCurrentFramePos());
+    prev.set(1);
+    prev.set(0);
+    ProcessBuffer();
+    EXPECT_FRAMEPOS_EQ(mixxx::audio::FramePos(88200), getCurrentFramePos());
+
+    setCurrentFramePos(mixxx::audio::FramePos(60000));
+    ControlProxy setCue(m_sGroup1, "memory_cue_set");
+    setCue.set(1);
+    setCue.set(0);
+    int memoryCues = 0;
+    for (const auto& pCue : pTrack->getCuePoints()) {
+        if (pCue->getType() == mixxx::CueType::Memory) {
+            memoryCues++;
+        }
+    }
+    EXPECT_EQ(3, memoryCues);
+}

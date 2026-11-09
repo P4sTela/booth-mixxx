@@ -24,6 +24,7 @@
 #include "track/keyfactory.h"
 #include "track/track.h"
 #include "util/color/color.h"
+#include "util/color/predefinedcolorpalettes.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarytextbrowser.h"
 
@@ -121,7 +122,22 @@ void applyCues(const TrackPointer& track,
         const QString comment = query.value(5).toString();
 
         if (hotCue == 0) {
+            CuePointer pMemoryCue = track->createAndAddCue(
+                    mixxx::CueType::Memory,
+                    Cue::kNoHotCue,
+                    position,
+                    endPosition,
+                    color ? *color
+                          : mixxx::PredefinedColorPalettes::kDefaultCueColor);
+            if (pMemoryCue) {
+                pMemoryCue->setLabel(comment);
+                if (color) {
+                    pMemoryCue->setColor(*color);
+                }
+            }
             if (!mainCueFound) {
+                // Mixxx needs a main cue for the CUE button; rekordbox's first memory
+                // point is the closest equivalent.
                 track->setMainCuePosition(position);
                 CuePointer pMainCue = track->findCueByType(mixxx::CueType::MainCue);
                 pMainCue->setLabel(comment);
@@ -129,9 +145,6 @@ void applyCues(const TrackPointer& track,
                     pMainCue->setColor(*color);
                 }
                 mainCueFound = true;
-            } else {
-                lastHotCue++;
-                setCue(track, lastHotCue, position, endPosition, comment, color);
             }
         } else {
             const int id = hotCue - 1;

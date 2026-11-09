@@ -15,6 +15,34 @@ void WaveformRenderMarkBase::setup(const QDomNode& node, const SkinContext& cont
     WaveformSignalColors signalColors = *m_waveformRenderer->getWaveformSignalColors();
     m_marks.setup(m_waveformRenderer->getGroup(), node, context, signalColors);
     m_marks.connectVisibleChanged(this, &WaveformRenderMarkBase::onMarkChanged);
+
+    // Memory cues use one fixed slot per position control, like hot cues. Skins do not need
+    // to declare them; CueControl owns the controls and fills them from the track.
+    if (!m_memoryMarksAdded) {
+        m_memoryMarksAdded = true;
+        const QString group = m_waveformRenderer->getGroup();
+        for (int i = 0; i < mixxx::kMaxMemoryCues; ++i) {
+            const QString suffix = QString::number(i + 1);
+            auto mark = WaveformMark::create(
+                    group,
+                    QStringLiteral("memory_cue_") + suffix + QStringLiteral("_position"),
+                    QStringLiteral("memory_cue_") + suffix + QStringLiteral("_enabled"),
+                    QStringLiteral("black"),
+                    QStringLiteral("top"),
+                    QString(),
+                    QString(),
+                    QString(),
+                    QColor(0x33, 0xcc, 0xff, 0xdd),
+                    1,
+                    Cue::kNoHotCue,
+                    signalColors);
+            if (const auto* pMark = std::get_if<WaveformMarkPointer>(&mark)) {
+                m_marks.addMark(*pMark);
+            } else {
+                qWarning() << "Cannot create waveform mark for memory cue" << i + 1;
+            }
+        }
+    }
 }
 
 void WaveformRenderMarkBase::onSetTrack() {

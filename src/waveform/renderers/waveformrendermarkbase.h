@@ -55,6 +55,7 @@ class WaveformRenderMarkBase : public QObject, public WaveformRendererAbstract {
 
   private:
     const bool m_updateImagesImmediately;
+    bool m_memoryMarksAdded = false;
 
     void updateMarksFromCues();
     void updateMarks();

@@ -19,6 +19,8 @@ enum class CueType {
     Outro = 7,
     N60dBSound = 8, // range that covers beginning and end of audible
                     // sound; not shown to user
+    /// A memory point: a named position that is not tied to a hot cue slot.
+    Memory = 9,
 };
 
 enum class CueFlag {
@@ -31,6 +33,9 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(CueFlags);
 
 /// Hot cues are sequentially indexed starting with kFirstHotCueIndex (inclusive)
 static constexpr int kFirstHotCueIndex = 0;
+
+/// Maximum number of memory cues a track can hold (rekordbox allows 10).
+static constexpr int kMaxMemoryCues = 10;
 
 // DTO for Cue information without dependencies on the actual Track object
 class CueInfo {

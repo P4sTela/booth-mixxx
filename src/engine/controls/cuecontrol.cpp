@@ -1,5 +1,8 @@
 #include "engine/controls/cuecontrol.h"
 
+#include <algorithm>
+#include <iterator>
+
 #include "control/controlindicator.h"
 #include "control/controlobject.h"
 #include "control/controlpushbutton.h"
@@ -232,6 +235,25 @@ void CueControl::createControls() {
     m_pCueDefault = std::make_unique<ControlPushButton>(ConfigKey(m_group, "cue_default"));
     m_pPlayStutter = std::make_unique<ControlPushButton>(ConfigKey(m_group, "play_stutter"));
 
+    m_pMemoryCueSet = std::make_unique<ControlPushButton>(
+            ConfigKey(m_group, "memory_cue_set"));
+    m_pMemoryCueSet->setButtonMode(mixxx::control::ButtonMode::Trigger);
+    m_pMemoryCuePrev = std::make_unique<ControlPushButton>(
+            ConfigKey(m_group, "memory_cue_prev"));
+    m_pMemoryCuePrev->setButtonMode(mixxx::control::ButtonMode::Trigger);
+    m_pMemoryCueNext = std::make_unique<ControlPushButton>(
+            ConfigKey(m_group, "memory_cue_next"));
+    m_pMemoryCueNext->setButtonMode(mixxx::control::ButtonMode::Trigger);
+    for (int i = 0; i < mixxx::kMaxMemoryCues; ++i) {
+        const QString suffix = QString::number(i + 1);
+        m_memoryCuePositions[i] = std::make_unique<ControlObject>(
+                ConfigKey(m_group, "memory_cue_" + suffix + "_position"));
+        m_memoryCuePositions[i]->set(Cue::kNoPosition);
+        m_memoryCueEnabled[i] = std::make_unique<ControlObject>(
+                ConfigKey(m_group, "memory_cue_" + suffix + "_enabled"));
+        m_memoryCueEnabled[i]->set(0.0);
+    }
+
     m_pPlayLatched = std::make_unique<ControlObject>(ConfigKey(m_group, "play_latched"));
     m_pPlayLatched->setReadOnly();
 
@@ -335,6 +357,21 @@ void CueControl::connectControls() {
             &ControlObject::valueChanged,
             this,
             &CueControl::cuePreview,
+            Qt::DirectConnection);
+    connect(m_pMemoryCueSet.get(),
+            &ControlObject::valueChanged,
+            this,
+            &CueControl::memoryCueSet,
+            Qt::DirectConnection);
+    connect(m_pMemoryCuePrev.get(),
+            &ControlObject::valueChanged,
+            this,
+            &CueControl::memoryCuePrev,
+            Qt::DirectConnection);
+    connect(m_pMemoryCueNext.get(),
+            &ControlObject::valueChanged,
+            this,
+            &CueControl::memoryCueNext,
             Qt::DirectConnection);
     connect(m_pCueCDJ.get(),
             &ControlObject::valueChanged,
@@ -496,6 +533,9 @@ void CueControl::disconnectControls() {
     disconnect(m_pCuePlay.get(), nullptr, this, nullptr);
     disconnect(m_pCueGotoAndStop.get(), nullptr, this, nullptr);
     disconnect(m_pCuePreview.get(), nullptr, this, nullptr);
+    disconnect(m_pMemoryCueSet.get(), nullptr, this, nullptr);
+    disconnect(m_pMemoryCuePrev.get(), nullptr, this, nullptr);
+    disconnect(m_pMemoryCueNext.get(), nullptr, this, nullptr);
     disconnect(m_pCueCDJ.get(), nullptr, this, nullptr);
     disconnect(m_pCueDefault.get(), nullptr, this, nullptr);
     disconnect(m_pPlayStutter.get(), nullptr, this, nullptr);
@@ -719,6 +759,7 @@ void CueControl::slotCueModeChanged(double) {
 void CueControl::loadCuesFromTrack() {
     auto lock = QMutexLocker(&m_trackMutex);
     if (!m_pLoadedTrack) {
+        updateMemoryCueControls();
         return;
     }
 
@@ -858,6 +899,91 @@ void CueControl::loadCuesFromTrack() {
     DEBUG_ASSERT(mainCuePosition.isValid());
     const auto quantizedMainCuePosition = quantizeCuePoint(mainCuePosition);
     m_pCuePoint->set(quantizedMainCuePosition.toEngineSamplePosMaybeInvalid());
+
+    updateMemoryCueControls();
+}
+
+void CueControl::updateMemoryCueControls() {
+    QList<mixxx::audio::FramePos> positions;
+    if (m_pLoadedTrack) {
+        for (const CuePointer& pCue : m_pLoadedTrack->getCuePoints()) {
+            if (pCue->getType() == mixxx::CueType::Memory) {
+                positions.append(pCue->getPosition());
+            }
+        }
+    }
+    std::sort(positions.begin(), positions.end());
+    for (int i = 0; i < mixxx::kMaxMemoryCues; ++i) {
+        const bool isSet = i < positions.size();
+        m_memoryCuePositions[i]->set(isSet
+                        ? positions.at(i).toEngineSamplePos()
+                        : Cue::kNoPosition);
+        m_memoryCueEnabled[i]->set(isSet ? 1.0 : 0.0);
+    }
+}
+
+void CueControl::memoryCueSet(double v) {
+    if (v <= 0 || !m_pLoadedTrack) {
+        return;
+    }
+    auto lock = QMutexLocker(&m_trackMutex);
+    const auto position = getQuantizedCurrentPosition();
+    for (const CuePointer& pCue : m_pLoadedTrack->getCuePoints()) {
+        if (pCue->getType() == mixxx::CueType::Memory &&
+                pCue->getPosition() == position) {
+            return;
+        }
+    }
+    m_pLoadedTrack->createAndAddCue(
+            mixxx::CueType::Memory,
+            Cue::kNoHotCue,
+            position,
+            mixxx::audio::kInvalidFramePos,
+            mixxx::PredefinedColorPalettes::kDefaultCueColor);
+}
+
+void CueControl::memoryCuePrev(double v) {
+    if (v <= 0 || !m_pLoadedTrack) {
+        return;
+    }
+    auto lock = QMutexLocker(&m_trackMutex);
+    QList<mixxx::audio::FramePos> positions;
+    for (const CuePointer& pCue : m_pLoadedTrack->getCuePoints()) {
+        if (pCue->getType() == mixxx::CueType::Memory) {
+            positions.append(pCue->getPosition());
+        }
+    }
+    if (positions.isEmpty()) {
+        return;
+    }
+    std::sort(positions.begin(), positions.end());
+    const auto current = getEngineBuffer()->getPlayPos();
+    auto it = std::lower_bound(positions.cbegin(), positions.cend(), current);
+    const auto target = it == positions.cbegin() ? positions.last() : *std::prev(it);
+    lock.unlock();
+    seekExact(target);
+}
+
+void CueControl::memoryCueNext(double v) {
+    if (v <= 0 || !m_pLoadedTrack) {
+        return;
+    }
+    auto lock = QMutexLocker(&m_trackMutex);
+    QList<mixxx::audio::FramePos> positions;
+    for (const CuePointer& pCue : m_pLoadedTrack->getCuePoints()) {
+        if (pCue->getType() == mixxx::CueType::Memory) {
+            positions.append(pCue->getPosition());
+        }
+    }
+    if (positions.isEmpty()) {
+        return;
+    }
+    std::sort(positions.begin(), positions.end());
+    const auto current = getEngineBuffer()->getPlayPos();
+    auto it = std::upper_bound(positions.cbegin(), positions.cend(), current);
+    const auto target = it == positions.cend() ? positions.first() : *it;
+    lock.unlock();
+    seekExact(target);
 }
 
 void CueControl::trackAnalyzed() {

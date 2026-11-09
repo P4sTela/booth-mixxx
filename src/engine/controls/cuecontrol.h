@@ -2,6 +2,8 @@
 
 #include <gtest/gtest_prod.h>
 
+#include <array>
+
 #include <QAtomicInt>
 #include <QAtomicPointer>
 #include <QList>
@@ -267,6 +269,10 @@ class CueControl : public EngineControl {
     void pause(double v);
     void playStutter(double v);
 
+    void memoryCueSet(double v);
+    void memoryCuePrev(double v);
+    void memoryCueNext(double v);
+
     void introStartSet(double v);
     void introStartClear(double v);
     void introStartActivate(double v);
@@ -296,6 +302,7 @@ class CueControl : public EngineControl {
     void detachCue(HotcueControl* pControl);
     void setCurrentSavedLoopControlAndActivate(HotcueControl* pControl);
     void loadCuesFromTrack();
+    void updateMemoryCueControls();
     mixxx::audio::FramePos quantizeCuePoint(mixxx::audio::FramePos position);
     mixxx::audio::FramePos getQuantizedCurrentPosition();
     TrackAt getTrackAt() const;
@@ -341,6 +348,14 @@ class CueControl : public EngineControl {
     std::unique_ptr<ControlPushButton> m_pCuePlay;
     std::unique_ptr<ControlPushButton> m_pCueGotoAndStop;
     std::unique_ptr<ControlPushButton> m_pCuePreview;
+
+    std::unique_ptr<ControlPushButton> m_pMemoryCueSet;
+    std::unique_ptr<ControlPushButton> m_pMemoryCuePrev;
+    std::unique_ptr<ControlPushButton> m_pMemoryCueNext;
+    std::array<std::unique_ptr<ControlObject>, mixxx::kMaxMemoryCues>
+            m_memoryCuePositions;
+    std::array<std::unique_ptr<ControlObject>, mixxx::kMaxMemoryCues>
+            m_memoryCueEnabled;
 
     std::unique_ptr<ControlObject> m_pIntroStartPosition;
     std::unique_ptr<ControlObject> m_pIntroStartEnabled;
