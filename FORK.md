@@ -50,6 +50,16 @@ flowchart LR
 
 上流のファイルへ手を入れるのは、登録（CMake・feature の一覧）など避けられない 1〜数行だけにする。
 
+## 実装状況（2026-11-09）
+
+- **`PRO DJ LINK` ライブラリ機能**: サイドバーの「PRO DJ LINK」を選ぶと sidecar に接続し、`master.db` の
+  コレクションを Mixxx の曲表に出す。実ライブラリ（409 曲）で、タイトル・アーティスト・BPM・長さ・パスが
+  入ることを確認。ANLZ（beatgrid / cue）はまだ読まない。
+- **設定**: `[Library] ShowProLinkLibrary`（既定 `true`）。ソケットは環境変数 `PDL_SIDECAR_SOCKET`、
+  既定は `$TMPDIR/pdl-sidecar.sock`。sidecar が居なければ画面にエラーを出すだけで、Mixxx は動き続ける。
+- **テスト**: `./build/mixxx-test --gtest_filter='ProLinkSidecarClientTest.*'`（偽の sidecar で
+  ページ送り・BPM の換算・エラーの伝播）。
+
 ## ビルド
 
 上流の手順に従う（`CONTRIBUTING.md`）。

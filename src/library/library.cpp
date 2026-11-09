@@ -20,6 +20,7 @@
 #include "library/librarycontrol.h"
 #include "library/libraryfeature.h"
 #include "library/mixxxlibraryfeature.h"
+#include "library/prolink/prolinkfeature.h"
 #include "library/recording/recordingfeature.h"
 #include "library/rekordbox/rekordboxfeature.h"
 #include "library/rhythmbox/rhythmboxfeature.h"
@@ -213,6 +214,11 @@ Library::Library(
     if (m_pConfig->getValue(
                 ConfigKey(kConfigGroup, "ShowRekordboxLibrary"), true)) {
         addFeature(new RekordboxFeature(this, m_pConfig));
+    }
+
+    if (m_pConfig->getValue(
+                ConfigKey(kConfigGroup, "ShowProLinkLibrary"), true)) {
+        addFeature(new ProLinkFeature(this, m_pConfig));
     }
 
     if (m_pConfig->getValue(

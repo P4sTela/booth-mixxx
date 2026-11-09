@@ -1470,6 +1470,8 @@ add_library(
   src/library/recording/dlgrecording.ui
   src/library/recording/recordingfeature.cpp
   src/library/rekordbox/rekordboxfeature.cpp
+  src/library/prolink/prolinkfeature.cpp
+  src/library/prolink/sidecarclient.cpp
   src/library/rhythmbox/rhythmboxfeature.cpp
   src/library/scanner/importfilestask.cpp
   src/library/scanner/libraryscanner.cpp
@@ -2949,6 +2951,7 @@ if(BUILD_TESTING)
     src/test/playlisttest.cpp
     src/test/portmidicontroller_test.cpp
     src/test/portmidienumeratortest.cpp
+    src/test/prolinksidecarclienttest.cpp
     src/test/queryutiltest.cpp
     src/test/rangelist_test.cpp
     src/test/readaheadmanager_test.cpp
