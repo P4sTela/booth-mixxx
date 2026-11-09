@@ -73,7 +73,7 @@ PRO DJ LINK と暗号化 `master.db` を扱う。このアプリ（GPL）はク�
 | method | params | result |
 |---|---|---|
 | `hello` | `protocol` | `protocol`, `sidecar`, `capabilities` |
-| `library.open` | `db`（パス。`null` なら既定の場所を探す） | `tracks`, `playlists` |
+| `library.open` | `db`（パス。`null` なら既定の場所を探す）, `share`（ANLZ のルート。省略時は `db` の隣の `share`） | `tracks`, `playlists` |
 | `library.tracks` | `offset`（既定 0）, `limit`（既定 500、最大 5000） | `total`, `tracks[]` |
 | `library.track` | `id` | 下記の 1 件（フィールドは `tracks[]` と同じ） |
 | `library.analysis` | `id` | `anlz: {dat, ext}`（書き出したファイルの絶対パス） |
@@ -99,8 +99,8 @@ PRO DJ LINK と暗号化 `master.db` を扱う。このアプリ（GPL）はク�
 
 - `bpm` は rekordbox の保存値（BPM×100）をそのまま返す。クライアントが 100 で割る。
 - `path` は元の音声ファイル。存在しない場合も返す（クライアントが「見つからない」と表示できるように）。
-- `library.analysis` の `dat` / `ext` は、sidecar のキャッシュ（`$TMPDIR/pdl-sidecar-cache/<id>/`）に
-  書き出した ANLZ。無い場合は `null`。
+- `library.analysis` の `dat` / `ext` は、rekordbox の share（`analysis-data-root-path`）にある
+  実ファイルの絶対パス。無い場合は `null`。クライアントはコピーせず、Mixxx の既存の ANLZ 読み取りに渡す。
 
 ## エラー
 
@@ -109,6 +109,8 @@ PRO DJ LINK と暗号化 `master.db` を扱う。このアプリ（GPL）はク�
 | `bad_request` | JSON でない、`id` が無い、引数の型が違う |
 | `unknown_method` | 未知の method |
 | `library.not_found` | `master.db`（と `-wal`）が見つからない |
+| `library.no_key` | 復号鍵が無い・読めない（`PDL_REKORDBOX_KEY` / `~/.config/pdl/rekordbox.key`） |
+| `library.not_open` | `library.open` より先に他の library method を呼んだ |
 | `library.locked` | コピーに失敗した（読み取り中のロックなど） |
 | `library.bad_db` | 復号・スキーマの読み取りに失敗した |
 | `track.not_found` | `id` が無い |
